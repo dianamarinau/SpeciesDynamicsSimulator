@@ -19,6 +19,7 @@ namespace SpeciesDynamicsSimulator
         public int[,] species = new int[rows, columns];
         public static int[] population;
         public static int[] initial_population;
+        public static bool[,] hasEaten = new bool[rows, columns];
         List<string> lines = new List<string>();
         public Civilisation(string FileName)
         {
@@ -29,7 +30,7 @@ namespace SpeciesDynamicsSimulator
             load.Close();
 
             int maxSpecies = 0;
-            foreach(string line in lines)
+            foreach (string line in lines)
             {
                 string[] elements = line.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 foreach (var el in elements)
@@ -41,10 +42,10 @@ namespace SpeciesDynamicsSimulator
 
             for (int i = 0; i < lines.Count; i++)
             {
-                string[] elements = lines[i].Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+                string[] elements = lines[i].Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 for (int j = 0; j < columns; j++)
                 {
-                    species[i,j] = int.Parse(elements[j]);
+                    species[i, j] = int.Parse(elements[j]);
                     initial_population[species[i, j]]++;
                 }
             }
@@ -59,17 +60,20 @@ namespace SpeciesDynamicsSimulator
             {
                 for (int j = 0; j < columns; j++)
                 {
-                    if (species[i, j] == 0)
+                    switch (species[i, j])
                     {
-                        graphics.FillRectangle(Brushes.DeepSkyBlue, j * size, i * size, size, size);
-                    }
-                    else if (species[i,j] == 1)
-                    {
-                        graphics.FillRectangle(Brushes.Aquamarine, j * size, i * size, size, size);
-                    }
-                    else
-                    {
-                        graphics.FillRectangle(Brushes.DarkTurquoise, j * size, i * size, size, size);
+                        case 0:
+                            graphics.FillRectangle(Brushes.DarkGreen, j * size, i * size, size, size);
+                            break;
+                        case 1:
+                            graphics.FillRectangle(Brushes.LightBlue, j * size, i * size, size, size);
+                            break;
+                        case 2:
+                            graphics.FillRectangle(Brushes.Blue, j * size, i * size, size, size);
+                            break;
+                        case 3:
+                            graphics.FillRectangle(Brushes.DarkBlue, j * size, i * size, size, size);
+                            break;
                     }
                 }
             }
@@ -88,8 +92,9 @@ namespace SpeciesDynamicsSimulator
         }
         public void Transformation()
         {
+            hasEaten = new bool[rows, columns];
             int[,] clone = Clone();
-            for(int i = 0; i < population.Length; i++)
+            for (int i = 0; i < population.Length; i++)
             {
                 population[i] = 0;
             }
@@ -103,27 +108,126 @@ namespace SpeciesDynamicsSimulator
                     if (i < rows - 1) neighbours[species[i + 1, j]]++; // jos
                     if (j > 0) neighbours[species[i, j - 1]]++; // stanga
                     if (j < columns - 1) neighbours[species[i, j + 1]]++; // dreapta
+                    if (i > 0 && j > 0) neighbours[species[i - 1, j - 1]]++; // sus-stanga
+                    if (i > 0 && j < columns - 1) neighbours[species[i - 1, j + 1]]++; // sus-dreapta
+                    if (i < rows - 1 && j > 0) neighbours[species[i + 1, j - 1]]++; // jos-stanga
+                    if (i < rows - 1 && j < columns - 1) neighbours[species[i + 1, j + 1]]++; // jos-dreapta
 
                     for (int k = 0; k < Form1.laws.Count; k++)
-                   {
+                    {
                         if (species[i, j] == Form1.laws[k].start)//daca tipul celulei curente e cel din lege
                         {
                             bool verified = true;
-                            foreach(var condition in Form1.laws[k].conditions)//verificam daca sunt indeplinite conditiile
+                            foreach (var condition in Form1.laws[k].conditions)//verificam daca sunt indeplinite conditiile
                             {
-                                if (neighbours[condition.neighbour] < condition.min_count 
+                                if (neighbours[condition.neighbour] < condition.min_count
                                     || neighbours[condition.neighbour] > condition.max_count)
                                 {
                                     verified = false;
                                     break;
                                 }
                             }
-                            if(verified)
+                            if (verified)
                             {
-                                clone[i,j] = Form1.laws[k].end;
-                                break;
-                            }
+                                if (Form1.laws[k].isActive)
+                                {
+                                    int timesEaten = 0;
+                                    if (species[i, j] == 2)
+                                    {
+                                        if (i > 0 && species[i - 1, j] == 3 && hasEaten[i - 1, j] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i - 1, j] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i < rows - 1 && species[i + 1, j] == 3 && hasEaten[i + 1, j] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i + 1, j] = true;
+                                            timesEaten++;
+                                        }
+                                        if (j > 0 && species[i, j - 1] == 3 && hasEaten[i, j - 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i, j - 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (j < columns - 1 && species[i, j + 1] == 3 && hasEaten[i, j + 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i, j + 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i > 0 && j > 0 && species[i - 1, j - 1] == 3 && hasEaten[i - 1, j - 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i - 1, j - 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i > 0 && j < columns - 1 && species[i - 1, j + 1] == 3 && hasEaten[i - 1, j + 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i - 1, j + 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i < rows - 1 && j > 0 && species[i + 1, j - 1] == 3 && hasEaten[i + 1, j - 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i + 1, j - 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i < rows - 1 && j < columns - 1 && species[i + 1, j + 1] == 3 && hasEaten[i + 1, j + 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i + 1, j + 1] = true;
+                                            timesEaten++;
+                                        }
+                                    }
+                                    else if (species[i, j] == 1)
+                                    {
+                                        if (i > 0 && species[i - 1, j] == 2 && hasEaten[i - 1, j] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i - 1, j] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i < rows - 1 && species[i + 1, j] == 2 && hasEaten[i + 1, j] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i + 1, j] = true;
+                                            timesEaten++;
+                                        }
+                                        if (j > 0 && species[i, j - 1] == 2 && hasEaten[i, j - 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i, j - 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (j < columns - 1 && species[i, j + 1] == 2 && hasEaten[i, j + 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i, j + 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i > 0 && j > 0 && species[i - 1, j - 1] == 2 && hasEaten[i - 1, j - 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i - 1, j - 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i > 0 && j < columns - 1 && species[i - 1, j + 1] == 2 && hasEaten[i - 1, j + 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i - 1, j + 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i < rows - 1 && j > 0 && species[i + 1, j - 1] == 2 && hasEaten[i + 1, j - 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i + 1, j - 1] = true;
+                                            timesEaten++;
+                                        }
+                                        if (i < rows - 1 && j < columns - 1 && species[i + 1, j + 1] == 2 && hasEaten[i + 1, j + 1] == false && timesEaten < 1)
+                                        {
+                                            hasEaten[i + 1, j + 1] = true;
+                                            timesEaten++;
+                                        }
 
+                                    }
+                                    if (timesEaten == 1)
+                                        clone[i, j] = Form1.laws[k].end;
+                                }
+                                else
+                                {
+                                    clone[i, j] = Form1.laws[k].end;
+                                }
+
+                            }
                         }
                     }
                 }

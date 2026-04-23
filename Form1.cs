@@ -19,7 +19,7 @@ namespace SpeciesDynamicsSimulator
         Civilisation civilisation;
         Civilisation initial;
         Series[] species;
-        Color[] colors = { Color.DeepSkyBlue, Color.Aquamarine, Color.Turquoise };
+        Color[] colors = { Color.DarkGreen, Color.LightBlue, Color.Blue, Color.DarkBlue};
         public static int numberofspecies;
         public static List<Law> laws = new List<Law>();
         public Form1()
@@ -28,15 +28,15 @@ namespace SpeciesDynamicsSimulator
             this.BackColor = Color.FromArgb(0,6, 48);
             bitmap = new Bitmap(pictureBox1.Width, pictureBox1.Height);
             graphics = Graphics.FromImage(bitmap);
-            civilisation = new Civilisation(@"..\..\Species.txt");
+            civilisation = new Civilisation(@"..\..\3SpeciesMatrix.txt");
             Civilisation.size = pictureBox1.Width / Civilisation.columns;
             Array.Clear(Civilisation.initial_population, 0, Civilisation.initial_population.Length);
-            initial = new Civilisation(@"..\..\Species.txt");
+            initial = new Civilisation(@"..\..\3SpeciesMatrix.txt");
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {   
-            StreamReader load = new StreamReader(@"..\..\NewLaws.txt");
+            StreamReader load = new StreamReader(@"..\..\PreyPredatorPredatorCompetitionLaws.txt");
             string buffer;
             while ((buffer = load.ReadLine()) != null)
             {
@@ -49,7 +49,7 @@ namespace SpeciesDynamicsSimulator
             numberofspecies = Civilisation.population.Length;
             species = new Series[numberofspecies];
             chart1.Series.Clear();
-            for (int i = 0; i < numberofspecies; i++)
+            for (int i = 1; i < numberofspecies; i++)
             {
                 species[i] = new Series($"Specia {i}");
                 species[i].ChartType = SeriesChartType.Line;
@@ -67,7 +67,7 @@ namespace SpeciesDynamicsSimulator
             btn_reset.Enabled = false;
 
             int generations = (int)numericUpDown1.Value;
-            for(int i = 0; i < numberofspecies; i++)
+            for(int i = 1; i < numberofspecies; i++)
                 species[i].Points.AddXY(0, Civilisation.population[i]);
 
             for (int i = 1; i <= generations; i++)
@@ -75,7 +75,7 @@ namespace SpeciesDynamicsSimulator
                 textBox1.Text = $"Generația {i}" ;
                 await Task.Delay(500); // Wait for 0.5 seconds before each generation
                 civilisation.Transformation();
-                for(int j = 0; j < numberofspecies; j++)
+                for(int j = 1; j < numberofspecies; j++)
                     species[j].Points.AddXY(i, Civilisation.population[j]);
                 civilisation.Draw(graphics);
                 pictureBox1.Image = bitmap;
@@ -87,7 +87,7 @@ namespace SpeciesDynamicsSimulator
         private void btn_reset_Click(object sender, EventArgs e)
         {
             chart1.Series.Clear();
-            for (int i = 0; i < numberofspecies; i++)
+            for (int i = 1; i < numberofspecies; i++)
             {
                 species[i] = new Series($"Specia {i}");
                 species[i].ChartType = SeriesChartType.Line;

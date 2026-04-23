@@ -85,8 +85,11 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="NewLaws.txt" />
-    <Content Include="Species.txt" />
+    <Content Include="3SpeciesMatrix.txt" />
+    <Content Include="PreyPredatorLaws.txt" />
+    <Content Include="PreyPredatorApexLaws.txt" />
+    <Content Include="2SpeciesMatrix.txt" />
+    <Content Include="PreyPredatorPredatorCompetitionLaws.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
