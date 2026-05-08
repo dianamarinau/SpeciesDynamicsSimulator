@@ -20,76 +20,104 @@ namespace SpeciesDynamicsSimulator
             int rows = state.Rows;
             int columns = state.Columns;
 
+            // hasEaten[r,c] = true daca celula (r,c) a fost deja mancata in aceasta generatie
             bool[,] hasEaten = new bool[rows, columns];
+
+            // fedPredator[r,c] = true daca pradatorul de la (r,c) a mancat deja in aceasta generatie
+            bool[,] fedPredator = new bool[rows, columns];
+
             GridState clone = state.Clone();
+            GridState result = state.Clone();
 
-            Array.Clear(state.Population, 0, state.Population.Length);
+            Array.Clear(result.Species, 0, result.Species.Length);
 
-            for(int i = 0; i < rows; i++)
-            {
-                for(int j = 0; j < columns; j++)
-                {
-                    int currentSpecies = clone.Species[i, j];
-                    int[] neighbours = new int[state.Population.Length];
 
-                    if (i > 0) neighbours[state.Species[i - 1, j]]++; // sus
-                    if (i < rows - 1) neighbours[state.Species[i + 1, j]]++; // jos
-                    if (j > 0) neighbours[state.Species[i, j - 1]]++; // stânga
-                    if (j < columns - 1) neighbours[state.Species[i, j + 1]]++; // dreapta
-                    if (i > 0 && j > 0) neighbours[state.Species[i - 1, j - 1]]++; // sus-stânga
-                    if (i > 0 && j < columns - 1) neighbours[state.Species[i - 1, j + 1]]++; // sus-dreapta
-                    if (i < rows - 1 && j > 0) neighbours[state.Species[i + 1, j - 1]]++; // jos-stânga
-                    if (i < rows - 1 && j < columns - 1) neighbours[state.Species[i + 1, j + 1]]++; // jos-dreapta
-
-                    for(int k = 0; k < _laws.Count; k++)
-                    {
-                        var law = _laws[k];
-                        if (currentSpecies == law.Start)
-                        {
-                            bool verified = true;
-                            foreach (var  condition in law.Conditions)
-                            {
-                                if (neighbours[condition.Neighbour] < condition.MinCount || neighbours[condition.Neighbour] > condition.MaxCount)
-                                {
-                                    verified = false;
-                                    break;
-                                }
-                            }
-                            if(verified)
-                            {
-                                if(law.IsActive)
-                                {
-                                    int timesEaten = 0;
-                                    if (currentSpecies == 2)
-                                    {
-                                        CheckEating(state, hasEaten, ref timesEaten, i, j, targetSpecies: 3);
-                                    }
-                                    else if (currentSpecies == 1)
-                                    {
-                                        CheckEating(state, hasEaten, ref timesEaten, i, j, targetSpecies: 2);
-                                    }
-
-                                    if (timesEaten == 1)
-                                        clone.Species[i, j] = law.End;
-                                }
-                                else
-                                    clone.Species[i, j] = law.End;
-                            }
-                        }
-                    }
-                }
-            }
             for (int i = 0; i < rows; i++)
             {
                 for (int j = 0; j < columns; j++)
                 {
-                    state.Species[i, j] = clone.Species[i, j];
-                    state.Population[state.Species[i, j]]++;
+                    int currentSpecies = clone.Species[i, j];
+                    int[] neighbours = new int[state.Population.Length];
+
+                    // Numara vecinii (8-directional)
+                    if (i > 0) neighbours[clone.Species[i - 1, j]]++;
+                    if (i < rows - 1) neighbours[clone.Species[i + 1, j]]++;
+                    if (j > 0) neighbours[clone.Species[i, j - 1]]++;
+                    if (j < columns - 1) neighbours[clone.Species[i, j + 1]]++;
+                    if (i > 0 && j > 0) neighbours[clone.Species[i - 1, j - 1]]++;
+                    if (i > 0 && j < columns - 1) neighbours[clone.Species[i - 1, j + 1]]++;
+                    if (i < rows - 1 && j > 0) neighbours[clone.Species[i + 1, j - 1]]++;
+                    if (i < rows - 1 && j < columns - 1) neighbours[clone.Species[i + 1, j + 1]]++;
+
+                    Law matchedLaw = null;
+                    for (int k = 0; k < _laws.Count; k++)
+                    {
+                        var law = _laws[k];
+                        if (currentSpecies != law.Start) continue;
+
+                        bool verified = true;
+                        foreach (var condition in law.Conditions)
+                        {
+                            if (neighbours[condition.Neighbour] < condition.MinCount ||
+                                neighbours[condition.Neighbour] > condition.MaxCount)
+                            {
+                                verified = false;
+                                break;
+                            }
+                        }
+
+                        if (verified)
+                            matchedLaw = law;
+                    }
+
+                    if (matchedLaw == null) continue;
+
+                    if (!matchedLaw.IsBlock)
+                    {
+                        result.Species[i, j] = matchedLaw.End;
+                    }
+                    else
+                    {
+                        int eaterSpecies = matchedLaw.Eater;
+                        bool eaten = false;
+
+                        int[] dr = { -1, -1, -1, 0, 0, 1, 1, 1 };
+                        int[] dc = { -1, 0, 1, -1, 1, -1, 0, 1 };
+
+                        for (int d = 0; d < 8; d++)
+                        {
+                            int ni = i + dr[d];
+                            int nj = j + dc[d];
+
+                            if (ni < 0 || ni >= rows || nj < 0 || nj >= columns) continue;
+
+                            // Vecinul trebuie sa fie pradatorul corect si sa nu fi mancat deja
+                            if (clone.Species[ni, nj] == eaterSpecies && !fedPredator[ni, nj])
+                            {
+                                if (!hasEaten[i, j])
+                                {
+                                    hasEaten[i, j] = true;
+                                    fedPredator[ni, nj] = true;
+                                    result.Species[i, j] = matchedLaw.End; // prada moare
+                                    eaten = true;
+                                    break;
+                                }
+                            }
+                        }
+                        // Daca niciun pradator eligibil nu exista, celula ramane neschimbata
+                    }
                 }
             }
+            Array.Clear(state.Population, 0, state.Population.Length);
+            for (int i = 0; i < rows; i++)
+                for (int j = 0; j < columns; j++)
+                {
+                    state.Species[i, j] = result.Species[i, j];
+                    state.Population[state.Species[i, j]]++;
+                }
         }
 
-        private void CheckEating(GridState state, bool[,] hasEaten, ref int timesEaten, int i, int j, int targetSpecies)
+        /*private void CheckEating(GridState state, bool[,] hasEaten, ref int timesEaten, int i, int j, int targetSpecies)
         {
             int rows = state.Rows;
             int columns = state.Columns;
@@ -134,6 +162,6 @@ namespace SpeciesDynamicsSimulator
                 hasEaten[i + 1, j + 1] = true; 
                 timesEaten++; 
             }
-        }
+        }*/
     }
 }

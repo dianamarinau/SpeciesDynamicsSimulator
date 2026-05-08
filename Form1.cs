@@ -12,7 +12,6 @@ namespace SpeciesDynamicsSimulator
         private Bitmap _bitmap;
         private Graphics _graphics;
 
-        // Noile noastre piese de arhitectură
         private GridState _currentState;
         private GridState _initialState;
         private SimulationEngine _engine;
@@ -32,7 +31,7 @@ namespace SpeciesDynamicsSimulator
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            var laws = DataLoader.LoadLaws(@"..\..\PreyPredatorPredatorCompetitionLaws.txt");
+            var laws = DataLoader.LoadLaws(@"..\..\PreyPredatorApexLaws.txt");
             _currentState = DataLoader.LoadGrid(@"..\..\3SpeciesMatrix.txt");
             _initialState = _currentState.Clone();
 

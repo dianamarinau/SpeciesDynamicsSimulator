@@ -46,30 +46,64 @@ namespace SpeciesDynamicsSimulator
         {
             var laws = new List<Law>();
             var lines = File.ReadAllLines(fileName);
+
             foreach (var line in lines)
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
-                string[] elements = line.Split(new char[] { '{', '}', ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                // Imparte linia in tokeni eliminand { } si spatii
+                string[] elements = line.Split(
+                    new char[] { '{', '}', ' ' },
+                    StringSplitOptions.RemoveEmptyEntries);
+
+                // elements[0] = Start
+                // elements[1] = conditiile (poate fi "SPECIE[MIN,MAX]" sau "SPECIE[MIN,MAX];SPECIE[MIN,MAX]")
+                // elements[2] = End
+                // elements[3] = "-" sau "block:EATER"
+
                 int start = int.Parse(elements[0].Trim());
                 int end = int.Parse(elements[2].Trim());
-                bool isActive = (elements.Length > 3 && elements[3].Trim() == "block");
 
-                var conditionsList = new List<Condition>();
-                string[] middle = elements[1].Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                bool isBlock = false;
+                int eater = -1;
 
-                foreach (string element in middle)
+                if (elements.Length > 3)
                 {
-                    string[] whole = element.Split(new char[] { '[', ']', ',' }, StringSplitOptions.RemoveEmptyEntries);
-                    int neighbour = int.Parse(whole[0].Trim());
-                    int minCount = int.Parse(whole[1].Trim());
-                    int maxCount = int.Parse(whole[2].Trim());
+                    string modifier = elements[3].Trim();
+                    if (modifier.StartsWith("block"))
+                    {
+                        isBlock = true;
+                        // Format "block:EATER" sau doar "block" (backward compat)
+                        if (modifier.Contains(":"))
+                        {
+                            string[] parts = modifier.Split(':');
+                            eater = int.Parse(parts[1].Trim());
+                        }
+                    }
+                }
+
+                // Parseaza conditiile separate prin ";"
+                var conditionsList = new List<Condition>();
+                string[] condTokens = elements[1].Split(
+                    new char[] { ';' },
+                    StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (string token in condTokens)
+                {
+                    string[] parts = token.Split(
+                        new char[] { '[', ']', ',' },
+                        StringSplitOptions.RemoveEmptyEntries);
+
+                    int neighbour = int.Parse(parts[0].Trim());
+                    int minCount = int.Parse(parts[1].Trim());
+                    int maxCount = int.Parse(parts[2].Trim());
 
                     conditionsList.Add(new Condition(neighbour, minCount, maxCount));
                 }
 
-                laws.Add(new Law(start, end, isActive, conditionsList));
+                laws.Add(new Law(start, end, isBlock, eater, conditionsList));
             }
+
             return laws;
         }
     }
